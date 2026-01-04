@@ -1,49 +1,262 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <title>قسم التحكم الآلي</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>بوابة قسم التحكم الآلي</title>
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
-      margin: 0;
-      padding: 20px;
+    :root{
+      --bg:#0b1220; --card:#101a33; --card2:#0f1930;
+      --txt:#e5e7eb; --muted:#a5b4fc; --border:#23335d;
+      --btn:#162a55; --btn2:#1e3a8a; --danger:#b91c1c;
     }
-    h1 { text-align: center; }
-    .tabs {
-      display: grid;
-      gap: 12px;
-      max-width: 500px;
-      margin: 30px auto;
+    body{margin:0;font-family:Arial,system-ui;background:var(--bg);color:var(--txt)}
+    .wrap{max-width:980px;margin:0 auto;padding:16px}
+    .top{
+      display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+      padding:10px 0 2px;
     }
-    .tab {
-      background: #1f2933;
-      padding: 16px;
-      border-radius: 10px;
-      text-align: center;
-      cursor: pointer;
-      font-size: 18px;
+    h1{margin:0;font-size:22px}
+    .sub{opacity:.75;font-size:13px}
+    .bar{
+      display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0 10px;
     }
-    .tab:hover { background: #2563eb; }
+    .tabs{display:flex;gap:10px;flex-wrap:wrap}
+    .tab{
+      background:var(--btn);border:1px solid var(--border);color:var(--txt);
+      padding:10px 12px;border-radius:12px;cursor:pointer;user-select:none;
+    }
+    .tab.active{background:var(--btn2)}
+    .search{
+      flex:1;min-width:220px;
+      background:var(--card);border:1px solid var(--border);color:var(--txt);
+      padding:10px 12px;border-radius:12px;outline:none;
+    }
+    .filters{display:flex;gap:10px;flex-wrap:wrap}
+    select{
+      background:var(--card);border:1px solid var(--border);color:var(--txt);
+      padding:10px 12px;border-radius:12px;outline:none;cursor:pointer;
+    }
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}}
+
+    .card{
+      background:linear-gradient(180deg,var(--card),var(--card2));
+      border:1px solid var(--border);
+      border-radius:16px;padding:14px;
+    }
+    .row{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+    .title{font-weight:700;font-size:16px;line-height:1.4}
+    .meta{opacity:.75;font-size:12px;margin-top:6px}
+    .badge{
+      font-size:12px;opacity:.95;border:1px solid var(--border);
+      padding:6px 10px;border-radius:999px;background:#0c1631;white-space:nowrap;
+    }
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .a{
+      display:inline-block;text-decoration:none;
+      background:var(--btn);border:1px solid var(--border);color:var(--txt);
+      padding:10px 12px;border-radius:12px;
+    }
+    .a:hover{background:var(--btn2)}
+    .empty{
+      border:1px dashed var(--border);border-radius:16px;padding:18px;
+      opacity:.85;margin-top:12px
+    }
+    .err{background:#2a0f12;border:1px solid #7f1d1d;color:#fecaca}
+    .footer{opacity:.6;font-size:12px;margin:16px 0}
   </style>
 </head>
+
 <body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>🤖 بوابة قسم التحكم الآلي</h1>
+        <div class="sub">واجهة مرتبة للمواد — بدون تلويث المجموعة</div>
+      </div>
+      <div class="sub" id="status">…</div>
+    </div>
 
-<h1>📘 قسم التحكم الآلي</h1>
+    <div class="bar">
+      <div class="tabs">
+        <div class="tab active" data-section="theory">📘 النظري</div>
+        <div class="tab" data-section="lab">🧪 العملي</div>
+      </div>
 
-<div class="tabs">
-  <div class="tab">📘 القسم النظري</div>
-  <div class="tab">🧪 القسم العملي</div>
-  <div class="tab">🗓️ برنامج الدوام</div>
-  <div class="tab">🧾 الامتحانات</div>
-</div>
+      <input class="search" id="q" placeholder="ابحث: محاضرة، PLC، تحكم..." />
 
-<p style="text-align:center; opacity:0.7">
-  نسخة تجريبية – سيتم ربطها بالبوت
-</p>
+      <div class="filters">
+        <select id="category">
+          <option value="all">كل التصنيفات</option>
+          <option value="lectures">📚 محاضرات</option>
+          <option value="study">🧠 مذاكرات</option>
+          <option value="labs">🧰 تجارب</option>
+          <option value="reports">🧾 تقارير/تعليمات</option>
+          <option value="schedule">🗓️ دوام</option>
+          <option value="exams">🧾 امتحانات</option>
+          <option value="tasks">📝 واجبات</option>
+        </select>
 
+        <select id="sort">
+          <option value="desc">الأحدث أولاً</option>
+          <option value="asc">الأقدم أولاً</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="list" class="grid"></div>
+    <div id="empty" class="empty" style="display:none;">
+      لا يوجد نتائج مطابقة. جرّب تغيير التصنيف أو كلمة البحث.
+    </div>
+
+    <div class="footer">
+      ملاحظة: رفع الملفات يكون عبر قناة المواد (للمشرفين)، والبوابة تعرضها هنا كرابط.
+    </div>
+  </div>
+
+  <!-- Firebase (modular SDK) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+    // ✅ firebaseConfig الخاص بك:
+    const firebaseConfig = {
+      apiKey: "AIzaSyAlEzIqECGYUyDAVmy5zNDy4XOLDacUhYs",
+      authDomain: "automatic-control-portal.firebaseapp.com",
+      projectId: "automatic-control-portal",
+      storageBucket: "automatic-control-portal.firebasestorage.app",
+      messagingSenderId: "255070391418",
+      appId: "1:255070391418:web:c74a8895248a35f7a1ffc3"
+    };
+
+    // ===== Helpers =====
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status");
+    const listEl = $("list");
+    const emptyEl = $("empty");
+
+    function catLabel(cat){
+      const m = {
+        lectures:"📚 محاضرات",
+        study:"🧠 مذاكرات",
+        labs:"🧰 تجارب",
+        reports:"🧾 تقارير/تعليمات",
+        schedule:"🗓️ دوام",
+        exams:"🧾 امتحانات",
+        tasks:"📝 واجبات",
+      };
+      return m[cat] || cat || "";
+    }
+    function sectionLabel(sec){
+      return sec === "theory" ? "📘 نظري" : sec === "lab" ? "🧪 عملي" : sec;
+    }
+
+    function normalize(s){ return (s||"").toString().trim().toLowerCase(); }
+
+    // ===== State =====
+    let ACTIVE_SECTION = "theory";
+    let ALL = []; // materials from firestore
+
+    function render(){
+      const q = normalize($("q").value);
+      const cat = $("category").value;
+      const sort = $("sort").value;
+
+      let items = ALL.filter(x => x.section === ACTIVE_SECTION);
+
+      if (cat !== "all") items = items.filter(x => x.category === cat);
+
+      if (q) {
+        items = items.filter(x =>
+          normalize(x.title).includes(q) || normalize(x.category).includes(q)
+        );
+      }
+
+      items.sort((a,b) => {
+        const A = (a.created_at || "");
+        const B = (b.created_at || "");
+        return sort === "asc" ? A.localeCompare(B) : B.localeCompare(A);
+      });
+
+      listEl.innerHTML = "";
+      emptyEl.style.display = items.length ? "none" : "block";
+
+      for (const it of items){
+        const badge = catLabel(it.category);
+        const created = it.created_at ? `📅 ${it.created_at}` : "";
+        const urlOk = (it.url || "").startsWith("http");
+
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <div class="row">
+            <div>
+              <div class="title">${it.title || "بدون عنوان"}</div>
+              <div class="meta">${sectionLabel(it.section)} • ${badge}${created ? " • " + created : ""}</div>
+            </div>
+            <div class="badge">${badge}</div>
+          </div>
+
+          <div class="actions">
+            ${urlOk
+              ? `<a class="a" href="${it.url}" target="_blank" rel="noopener">📎 فتح الملف</a>`
+              : `<span class="a err">⚠️ رابط غير صالح</span>`
+            }
+          </div>
+        `;
+        listEl.appendChild(div);
+      }
+    }
+
+    function setActiveTab(sec){
+      ACTIVE_SECTION = sec;
+      document.querySelectorAll(".tab").forEach(t => {
+        t.classList.toggle("active", t.dataset.section === sec);
+      });
+      render();
+    }
+
+    // ===== Init UI events =====
+    document.querySelectorAll(".tab").forEach(t => {
+      t.addEventListener("click", () => setActiveTab(t.dataset.section));
+    });
+    $("q").addEventListener("input", render);
+    $("category").addEventListener("change", render);
+    $("sort").addEventListener("change", render);
+
+    // ===== Load from Firestore =====
+    async function load(){
+      try{
+        statusEl.textContent = "تحميل البيانات...";
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const snap = await getDocs(collection(db, "materials"));
+        ALL = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        statusEl.textContent = `✅ تم التحميل: ${ALL.length} عنصر`;
+        render();
+      } catch (e){
+        console.error(e);
+        statusEl.textContent = "❌ خطأ في الاتصال بقاعدة البيانات";
+        emptyEl.style.display = "block";
+        emptyEl.innerHTML = `
+          <div style="font-weight:700;margin-bottom:8px">تعذر تحميل البيانات</div>
+          <div style="opacity:.85;line-height:1.7">
+            تأكد من:
+            <ol>
+              <li>Firestore في وضع test mode أو rules تسمح بالقراءة</li>
+              <li>وجود collection اسمها materials</li>
+              <li>اتصال الإنترنت يعمل</li>
+            </ol>
+          </div>
+        `;
+      }
+    }
+
+    load();
+  </script>
 </body>
 </html>
