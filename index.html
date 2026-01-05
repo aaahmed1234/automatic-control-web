@@ -66,6 +66,7 @@
     }
     .err{background:#2a0f12;border:1px solid #7f1d1d;color:#fecaca}
     .footer{opacity:.6;font-size:12px;margin:16px 0}
+    ol{margin:8px 0 0 0;padding:0 22px}
   </style>
 </head>
 
@@ -107,12 +108,10 @@
     </div>
 
     <div id="list" class="grid"></div>
-    <div id="empty" class="empty" style="display:none;">
-      لا يوجد نتائج مطابقة. جرّب تغيير التصنيف أو كلمة البحث.
-    </div>
+    <div id="empty" class="empty" style="display:none;"></div>
 
     <div class="footer">
-      ملاحظة: رفع الملفات يكون عبر قناة المواد (للمشرفين)، والبوابة تعرضها هنا كرابط.
+      ملاحظة: الملفات تُرفع في مكان آخر (قناة/درايف/تليغرام)، والبوابة تعرضها هنا كرابط.
     </div>
   </div>
 
@@ -137,6 +136,33 @@
     const listEl = $("list");
     const emptyEl = $("empty");
 
+    function normalize(s){
+      return (s ?? "").toString().trim().toLowerCase();
+    }
+
+    const VALID_SECTIONS = new Set(["theory","lab"]);
+    const VALID_CATEGORIES = new Set(["lectures","study","labs","reports","schedule","exams","tasks"]);
+
+    const AR_MAP = {
+      "نظري":"theory",
+      "الـنظري":"theory",
+      "القسم النظري":"theory",
+      "عملي":"lab",
+      "العملي":"lab",
+      "القسم العملي":"lab",
+
+      "محاضرات":"lectures",
+      "مذاكرات":"study",
+      "تجارب":"labs",
+      "تجربة":"labs",
+      "تقارير":"reports",
+      "تعليمات":"reports",
+      "دوام":"schedule",
+      "برنامج الدوام":"schedule",
+      "امتحانات":"exams",
+      "واجبات":"tasks"
+    };
+
     function catLabel(cat){
       const m = {
         lectures:"📚 محاضرات",
@@ -149,15 +175,60 @@
       };
       return m[cat] || cat || "";
     }
+
     function sectionLabel(sec){
       return sec === "theory" ? "📘 نظري" : sec === "lab" ? "🧪 عملي" : sec;
     }
 
-    function normalize(s){ return (s||"").toString().trim().toLowerCase(); }
+    function isHttpUrl(u){
+      const s = (u ?? "").toString().trim();
+      return s.startsWith("http://") || s.startsWith("https://");
+    }
+
+    // ✅ تصلّح أي سجل قادم من Firestore (حتى لو الحقول مقلوبة أو بالعربي)
+    function fixItem(raw){
+      // دعم أسماء محتملة: section/type , category/tab
+      let section = normalize(raw.section || raw.type);
+      let category = normalize(raw.category || raw.tab);
+
+      // تحويل العربي إلى قيم النظام
+      if (AR_MAP[section]) section = AR_MAP[section];
+      if (AR_MAP[category]) category = AR_MAP[category];
+
+      // تنظيف إضافي (مثلاً "Lectures " أو " LABS")
+      section = normalize(section);
+      category = normalize(category);
+
+      // ✅ أهم إصلاح: إذا كان الحقلين مقلوبين
+      // مثال: section="lectures" و category="theory"
+      if (VALID_CATEGORIES.has(section) && VALID_SECTIONS.has(category)) {
+        const tmp = section;
+        section = category;
+        category = tmp;
+      }
+
+      // افتراضات افتراضية لمنع اختفاء العناصر
+      if (!VALID_SECTIONS.has(section)) section = "theory";
+      if (!VALID_CATEGORIES.has(category)) category = "lectures";
+
+      return {
+        id: raw.id,
+        title: raw.title ?? "بدون عنوان",
+        url: (raw.url ?? "").toString().trim(),
+        created_at: (raw.created_at ?? "").toString().trim(),
+        section,
+        category
+      };
+    }
 
     // ===== State =====
     let ACTIVE_SECTION = "theory";
-    let ALL = []; // materials from firestore
+    let ALL = [];
+
+    function showEmpty(msgHtml){
+      emptyEl.style.display = "block";
+      emptyEl.innerHTML = msgHtml || "لا يوجد نتائج مطابقة. جرّب تغيير التصنيف أو كلمة البحث.";
+    }
 
     function render(){
       const q = normalize($("q").value);
@@ -166,34 +237,38 @@
 
       let items = ALL.filter(x => x.section === ACTIVE_SECTION);
 
+      // فلترة الكاتيغوري
       if (cat !== "all") items = items.filter(x => x.category === cat);
 
+      // بحث (عنوان + كاتيغوري)
       if (q) {
         items = items.filter(x =>
           normalize(x.title).includes(q) || normalize(x.category).includes(q)
         );
       }
 
+      // ترتيب حسب created_at نصياً (YYYY-MM-DD يشتغل ممتاز)
       items.sort((a,b) => {
-        const A = (a.created_at || "");
-        const B = (b.created_at || "");
+        const A = a.created_at || "";
+        const B = b.created_at || "";
         return sort === "asc" ? A.localeCompare(B) : B.localeCompare(A);
       });
 
       listEl.innerHTML = "";
       emptyEl.style.display = items.length ? "none" : "block";
+      if (!items.length) showEmpty();
 
       for (const it of items){
         const badge = catLabel(it.category);
         const created = it.created_at ? `📅 ${it.created_at}` : "";
-        const urlOk = (it.url || "").startsWith("http");
+        const urlOk = isHttpUrl(it.url);
 
         const div = document.createElement("div");
         div.className = "card";
         div.innerHTML = `
           <div class="row">
             <div>
-              <div class="title">${it.title || "بدون عنوان"}</div>
+              <div class="title">${escapeHtml(it.title)}</div>
               <div class="meta">${sectionLabel(it.section)} • ${badge}${created ? " • " + created : ""}</div>
             </div>
             <div class="badge">${badge}</div>
@@ -208,6 +283,15 @@
         `;
         listEl.appendChild(div);
       }
+    }
+
+    function escapeHtml(str){
+      return (str ?? "").toString()
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
     }
 
     function setActiveTab(sec){
@@ -234,25 +318,30 @@
         const db = getFirestore(app);
 
         const snap = await getDocs(collection(db, "materials"));
-        ALL = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // ✅ إصلاح/تطبيع البيانات هنا
+        ALL = snap.docs.map(d => fixItem({ id: d.id, ...d.data() }));
 
         statusEl.textContent = `✅ تم التحميل: ${ALL.length} عنصر`;
+        // للتشخيص (شوفها بالـ Console)
+        console.log("sections:", [...new Set(ALL.map(x=>x.section))]);
+        console.log("categories:", [...new Set(ALL.map(x=>x.category))]);
+
         render();
       } catch (e){
         console.error(e);
         statusEl.textContent = "❌ خطأ في الاتصال بقاعدة البيانات";
-        emptyEl.style.display = "block";
-        emptyEl.innerHTML = `
+        showEmpty(`
           <div style="font-weight:700;margin-bottom:8px">تعذر تحميل البيانات</div>
           <div style="opacity:.85;line-height:1.7">
             تأكد من:
             <ol>
-              <li>Firestore في وضع test mode أو rules تسمح بالقراءة</li>
-              <li>وجود collection اسمها materials</li>
-              <li>اتصال الإنترنت يعمل</li>
+              <li>وجود collection اسمها <b>materials</b></li>
+              <li>قواعد Firestore تسمح بالقراءة (Test mode أو rules قراءة عامة)</li>
+              <li>إنترنت يعمل</li>
             </ol>
           </div>
-        `;
+        `);
       }
     }
 
